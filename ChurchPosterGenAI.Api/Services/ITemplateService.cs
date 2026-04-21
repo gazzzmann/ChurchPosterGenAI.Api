@@ -1,6 +1,10 @@
-﻿namespace ChurchPosterGenAI.Api.Services
+﻿using ChurchPosterGenAI.Api.Data;
+
+namespace ChurchPosterGenAI.Api.Services
 {
-    public class ITemplateService
+    public interface ITemplateService
     {
+        Task<IEnumerable<PosterTemplate>> GetAllAsync();
+        Task<PosterTemplate?> GetByIdAsync(int id);
     }
 }
