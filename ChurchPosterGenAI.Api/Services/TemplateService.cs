@@ -1,4 +1,5 @@
 ﻿using ChurchPosterGenAI.Api.Data;
+using ChurchPosterGenAI.Api.DTO_s;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChurchPosterGenAI.Api.Services
@@ -11,14 +12,31 @@ namespace ChurchPosterGenAI.Api.Services
         {
             _context = context;
         }
-        public async Task<IEnumerable<PosterTemplate>> GetAllAsync()
+        public async Task<IEnumerable<TemplateResponseDto>> GetAllAsync()
         {
-            return await _context.Templates.ToListAsync();
+            return await _context.Templates
+             .Select(t => new TemplateResponseDto
+             {
+                 Id = t.Id,
+                 Title = t.Title,
+                 CategoryName = t.Category.ToString(), // Converts enum to string
+                 ImageUrl = t.ImageUrl
+             })
+             .ToListAsync();
         }
 
-        public async Task<PosterTemplate?> GetByIdAsync(int id)
+        public async Task<TemplateResponseDto?> GetByIdAsync(int id)
         {
-            return _context.Templates.FirstOrDefault(t => t.Id == id);
+            var template = await _context.Templates.FirstOrDefaultAsync(t => t.Id == id);
+            if (template == null) return null;
+
+            return new TemplateResponseDto
+            {
+                Id = template.Id,
+                Title = template.Title,
+                CategoryName = template.Category.ToString(),
+                ImageUrl = template.ImageUrl
+            };
         }
     }
 }
