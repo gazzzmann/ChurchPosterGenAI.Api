@@ -1,6 +1,6 @@
 ﻿namespace ChurchPosterGenAI.Api.Services
 {
-    public class TemplateService : ITemplateService
+    public class ITemplateService
     {
     }
 }

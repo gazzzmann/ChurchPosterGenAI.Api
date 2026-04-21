@@ -1,4 +1,5 @@
 using ChurchPosterGenAI.Api.Data;
+using ChurchPosterGenAI.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,6 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("ChurchPosterDbConnectionString");
 builder.Services.AddDbContext<ChurchPosterDbContext>(options => options.UseSqlServer(connectionString));
+
+builder.Services.AddScoped<ITemplateService, TemplateService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
