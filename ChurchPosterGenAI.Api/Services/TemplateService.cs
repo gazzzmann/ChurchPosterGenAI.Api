@@ -14,15 +14,17 @@ namespace ChurchPosterGenAI.Api.Services
         }
         public async Task<IEnumerable<TemplateResponseDto>> GetAllAsync()
         {
-            return await _context.Templates
+            var templates = await _context.Templates.ToListAsync();
+
+            return templates
              .Select(t => new TemplateResponseDto
              {
                  Id = t.Id,
                  Title = t.Title,
                  CategoryName = t.Category.ToString(), // Converts enum to string
                  ImageUrl = t.ImageUrl
-             })
-             .ToListAsync();
+             });
+             
         }
 
         public async Task<TemplateResponseDto?> GetByIdAsync(int id)
