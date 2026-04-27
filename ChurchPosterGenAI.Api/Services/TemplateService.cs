@@ -40,5 +40,19 @@ namespace ChurchPosterGenAI.Api.Services
                 ImageUrl = template.ImageUrl
             };
         }
+
+        public async Task<TemplateResponseDto> AddTemplateAsync(PosterTemplate template)
+        {
+            _context.Templates.Add(template);
+            await _context.SaveChangesAsync();
+
+            return new TemplateResponseDto
+            {
+                Id = template.Id,
+                Title = template.Title,
+                CategoryName = template.Category.ToString(),
+                ImageUrl = template.ImageUrl
+            };
+        }
     }
 }

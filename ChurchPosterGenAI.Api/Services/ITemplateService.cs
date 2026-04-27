@@ -7,5 +7,6 @@ namespace ChurchPosterGenAI.Api.Services
     {
         Task<IEnumerable<TemplateResponseDto>> GetAllAsync();
         Task<TemplateResponseDto?> GetByIdAsync(int id);
+        Task<TemplateResponseDto> AddTemplateAsync(PosterTemplate template);
     }
 }
