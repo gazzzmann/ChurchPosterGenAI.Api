@@ -21,6 +21,7 @@ builder.Services.AddHttpClient("OpenAI", client =>
 builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddScoped<IGenerationService, GenerationService>();
 builder.Services.AddScoped<IAIImageService, AIImageService>();
+builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
 
 builder.Services.AddHttpContextAccessor();
 
