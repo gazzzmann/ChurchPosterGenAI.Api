@@ -10,11 +10,11 @@ namespace ChurchPosterGenAI.Api.Controllers;
 public class TemplateController : ControllerBase
 {
     private readonly ITemplateService _templateService;
-    private readonly IBlobStorageService _blobStorageService; // Add Blob Service
+    private readonly IBlobStorageService _blobStorageService;
 
     public TemplateController(
         ITemplateService templateService,
-        IBlobStorageService blobStorageService) // Inject it here
+        IBlobStorageService blobStorageService)
     {
         _templateService = templateService;
         _blobStorageService = blobStorageService;

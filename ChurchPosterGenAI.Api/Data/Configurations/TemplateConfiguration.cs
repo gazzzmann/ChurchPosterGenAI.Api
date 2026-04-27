@@ -9,6 +9,7 @@ public class TemplateConfiguration : IEntityTypeConfiguration<PosterTemplate>
 {
     public void Configure(EntityTypeBuilder<PosterTemplate> builder)
     {
+
         builder.HasData(
             new PosterTemplate
             {

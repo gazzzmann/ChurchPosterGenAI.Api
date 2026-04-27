@@ -1,5 +1,5 @@
 ﻿using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models; // Add this using directive at the top
+using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Http;
 
 namespace ChurchPosterGenAI.Api.Services
@@ -24,18 +24,16 @@ namespace ChurchPosterGenAI.Api.Services
 
             var blobClient = containerClient.GetBlobClient(uniqueBlobName);
 
-            // Create the options object and map the ContentType from the incoming file
-            var uploadOptions = new BlobUploadOptions
-            {
-                HttpHeaders = new BlobHttpHeaders
-                {
-                    ContentType = image.ContentType // This will be "image/jpeg", "image/png", etc.
-                }
-            };
-
             using (var stream = image.OpenReadStream())
             {
-                // Pass the options into the upload method
+                var uploadOptions = new BlobUploadOptions
+                {
+                    HttpHeaders = new BlobHttpHeaders
+                    {
+                        ContentType = image.ContentType
+                    }
+                };
+
                 await blobClient.UploadAsync(stream, uploadOptions);
             }
 
