@@ -1,7 +1,7 @@
 ﻿using ChurchPosterGenAI.Api.Services;
-using ChurchPosterGenAI.Api.DTO_s;
 using ChurchPosterGenAI.Api.Data;
 using Microsoft.AspNetCore.Mvc;
+using ChurchPosterGenAI.Api.DTOs;
 
 namespace ChurchPosterGenAI.Api.Controllers;
 

@@ -6,6 +6,6 @@
 
         public string Status { get; set; } = string.Empty;
 
-        public string? ImageUrl { get; set; } // optional (if instantly available)
+        public string? ImageUrl { get; set; } 
     }
 }

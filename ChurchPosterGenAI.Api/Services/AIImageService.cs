@@ -1,95 +1,76 @@
-﻿using System.Text.Json;
-
-namespace ChurchPosterGenAI.Api.Services
+﻿namespace ChurchPosterGenAI.Api.Services
 {
     public class AIImageService : IAIImageService
     {
         private readonly HttpClient _httpClient;
-        private readonly IWebHostEnvironment _env;
-        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public AIImageService(
-            IHttpClientFactory factory,
-            IWebHostEnvironment env,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpClientFactory factory)
         {
-            _httpClient = factory.CreateClient("OpenAI");
-            _env = env;
-            _httpContextAccessor = httpContextAccessor;
+            _httpClient = factory.CreateClient("HuggingFace");
         }
 
-
         public async Task<string> GenerateFromImageAsync(
-     string imageUrl,
-     string prompt)
+            string imageUrl,
+            string prompt)
         {
-            var finalPrompt = $@"
-Create a premium church flyer.
+            // STEP 1: Download reference image from Azure Blob URL
+            var imageBytes =
+                await _httpClient.GetByteArrayAsync(imageUrl);
 
-{prompt}
+            var base64Image =
+                Convert.ToBase64String(imageBytes);
 
-Requirements:
-- modern church flyer
-- premium typography
-- white and blue theme
-- clean layout
-- spiritual atmosphere
-- print ready
-- high-end design
-";
-
+            // STEP 2: Build payload for Hugging Face
             var payload = new
             {
-                model = "gpt-image-1",
-                prompt = finalPrompt,
-                size = "1536x1024"
+                inputs = prompt,
+                parameters = new
+                {
+                    image = base64Image,
+                    strength = 0.55,
+                    guidance_scale = 8.5
+                }
             };
 
-            var response = await _httpClient.PostAsJsonAsync(
-                "images/generations",
-                payload);
-
-            var body = await response.Content.ReadAsStringAsync();
+            // STEP 3: Generate image
+            var response =
+                await _httpClient.PostAsJsonAsync(
+                    "stabilityai/stable-diffusion-xl-base-1.0",
+                    payload);
 
             if (!response.IsSuccessStatusCode)
-                throw new Exception($"OpenAI Error: {body}");
+            {
+                var error =
+                    await response.Content.ReadAsStringAsync();
 
-            var json = JsonDocument.Parse(body);
+                throw new Exception(
+                    $"HuggingFace Error: {error}");
+            }
 
-            var base64 = json.RootElement
-                .GetProperty("data")[0]
-                .GetProperty("b64_json")
-                .GetString();
+            var generatedBytes =
+                await response.Content.ReadAsByteArrayAsync();
 
-            var bytes = Convert.FromBase64String(base64!);
-
-            var fileName = $"{Guid.NewGuid():N}.png";
-
+            // STEP 4: Save locally for testing
             var folder = Path.Combine(
-                _env.WebRootPath,
-                "images",
-                "generated");
+                Directory.GetCurrentDirectory(),
+                "TempGenerated");
 
             Directory.CreateDirectory(folder);
 
-            var fullPath = Path.Combine(folder, fileName);
+            var fileName =
+                $"{Guid.NewGuid():N}.png";
 
-            await File.WriteAllBytesAsync(fullPath, bytes);
+            var fullPath = Path.Combine(
+                folder,
+                fileName);
 
-            return BuildPublicUrl(fileName);
-        }
+            await File.WriteAllBytesAsync(
+                fullPath,
+                generatedBytes);
 
-        private string BuildPublicUrl(string fileName)
-        {
-            var request = _httpContextAccessor.HttpContext!.Request;
-
-            return $"{request.Scheme}://{request.Host}/images/generated/{fileName}";
+            // STEP 5: Return local file path
+            return fullPath;
         }
     }
 }
-
-// ===============================
-// AIImageService.cs
-// Saves real PNG into wwwroot/generated
-// Returns public URL
-// ===============================

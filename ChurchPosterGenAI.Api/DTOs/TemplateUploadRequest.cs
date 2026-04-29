@@ -1,7 +1,7 @@
 ﻿using ChurchPosterGenAI.Api.Enum;
 using Microsoft.AspNetCore.Http;
 
-namespace ChurchPosterGenAI.Api.DTO_s
+namespace ChurchPosterGenAI.Api.DTOs
 {
     public class TemplateUploadRequest
     {

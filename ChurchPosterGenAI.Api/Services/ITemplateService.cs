@@ -1,5 +1,5 @@
 ﻿using ChurchPosterGenAI.Api.Data;
-using ChurchPosterGenAI.Api.DTO_s;
+using ChurchPosterGenAI.Api.DTOs;
 
 namespace ChurchPosterGenAI.Api.Services
 {

@@ -1,4 +1,4 @@
-﻿namespace ChurchPosterGenAI.Api.DTO_s
+﻿namespace ChurchPosterGenAI.Api.DTOs
 {
     public class TemplateResponseDto
     {
