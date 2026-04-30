@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ChurchPosterGenAI.Api.Migrations
 {
     [DbContext(typeof(ChurchPosterDbContext))]
-    [Migration("20260419174309_InitalCreate")]
-    partial class InitalCreate
+    [Migration("20260421100354_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -1,6 +1,15 @@
-@ChurchPosterGenAI.Api_HostAddress = http://localhost:5166
+@host = https://localhost:7254
+@requestId = 2
 
-GET {{ChurchPosterGenAI.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Generate Poster
+POST {{host}}/api/generation
+Content-Type: application/json
 
-###
+{
+  "userId": "user-003",
+  "posterTemplateId": 1,
+  "prompt": "Create a youth revival flyer with white and blue theme. Header should be \"MFM Youth Conference\". Change date and time to 29 Dec, 9 AM to 1 PM."
+}
+
+### Get Result
+GET {{host}}/api/generation/{{requestId}}
