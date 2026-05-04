@@ -1,5 +1,6 @@
 ﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace ChurchPosterGenAI.Api.Services
 {
@@ -10,11 +11,9 @@ namespace ChurchPosterGenAI.Api.Services
 
         public BlobStorageService(IConfiguration configuration)
         {
-            var connectionString =
-                configuration["AzureBlob:ConnectionString"];
-
-            _blobServiceClient =
-                new BlobServiceClient(connectionString);
+            // This grabs the connection string you put in your secrets.json / appsettings
+            string connectionString = configuration["AzureBlob:ConnectionString"] ?? throw new Exception("Connection Not Found");
+            _blobServiceClient = new BlobServiceClient(connectionString);
         }
 
         public async Task<string> UploadImageAsync(

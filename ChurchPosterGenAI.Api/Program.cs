@@ -1,3 +1,4 @@
+using ChurchPosterGenAI.Api.Controllers;
 using ChurchPosterGenAI.Api.Data;
 using ChurchPosterGenAI.Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -26,23 +27,32 @@ builder.Services.AddHttpClient("HuggingFace", client =>
     client.Timeout = TimeSpan.FromMinutes(3);
 });
 
+
 builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddScoped<IGenerationService, GenerationService>();
 builder.Services.AddScoped<IAIImageService, AIImageService>();
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+builder.Services.AddScoped<MongoService>();
+builder.Services.AddScoped<PosterClassifierService>();
+builder.Services.AddScoped<FileUploaderService>();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddControllers()
-.AddJsonOptions(options =>
-{
-    options.JsonSerializerOptions.Converters
-        .Add(new JsonStringEnumConverter());
-});
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters
+            .Add(new JsonStringEnumConverter());
+    });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddOpenApi();
-
 var app = builder.Build();
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json","ChurchPoster");
+});
 
 if (app.Environment.IsDevelopment())
 {
