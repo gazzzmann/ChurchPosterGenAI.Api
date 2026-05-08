@@ -1,6 +1,6 @@
 ﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Microsoft.AspNetCore.Http;
+
 
 namespace ChurchPosterGenAI.Api.Services
 {
@@ -78,6 +78,22 @@ namespace ChurchPosterGenAI.Api.Services
                 });
 
             return blobClient.Uri.ToString();
+        }
+        public async Task<IEnumerable<string>> GetAllImagesAsync()
+        {
+            var container =
+                _blobServiceClient
+                .GetBlobContainerClient(_containerName);
+            
+            var posterIds = new List<string>();
+
+            await foreach (var blobItem in container.GetBlobsAsync())
+            {
+                var blobClient = container.GetBlobClient(blobItem.Name);
+                posterIds.Add(blobClient.Uri.ToString());
+                
+            }
+            return posterIds;
         }
     }
 }

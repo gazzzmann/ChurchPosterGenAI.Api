@@ -5,6 +5,6 @@ public class GeneratedPoster
     public int Id { get; set; }
     public int GenerationRequestId { get; set; }
     public GenerationRequest? Request { get; set; }
-    public string ImageUrl { get; set; } 
+    public string ImageUrl { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
 }

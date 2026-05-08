@@ -11,13 +11,16 @@ public class TemplateController : ControllerBase
 {
     private readonly ITemplateService _templateService;
     private readonly IBlobStorageService _blobStorageService;
-
+    private readonly MongoService _mongoService;
     public TemplateController(
         ITemplateService templateService,
-        IBlobStorageService blobStorageService)
+        IBlobStorageService blobStorageService,
+        MongoService mongoService
+        )
     {
         _templateService = templateService;
         _blobStorageService = blobStorageService;
+        _mongoService = mongoService;
     }
 
     [HttpGet]
@@ -64,5 +67,16 @@ public class TemplateController : ControllerBase
 
         // 4. Return the new DTO
         return CreatedAtAction(nameof(GetById), new { id = createdTemplate.Id }, createdTemplate);
+    }
+    [HttpGet("/GetAllTemplates")]
+    public async Task<IActionResult> GetAllTemplate()
+    {
+        var result = await _mongoService.GetAllAsync();
+        
+        if(result == null)
+        {
+            return NotFound("No Template Found");
+        }
+        return Ok(result);
     }
 }

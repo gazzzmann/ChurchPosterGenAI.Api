@@ -17,11 +17,12 @@ public class MongoService
         _collection = database.GetCollection<PosterTemplateDocument>("PosterTemplates");
     }
 
-    public async Task<bool> CheckFiles(string blobPath)
-    {
-        var filter = Builders<PosterTemplateDocument>.Filter.Eq(p => p.ImageUrl, blobPath);
-        return await _collection.Find(filter).AnyAsync();
-    }
+    public async Task<bool> CheckFiles(string filePath)
+        {
+            string title = Path.GetFileNameWithoutExtension(filePath);
+            var filter = Builders<PosterTemplateDocument>.Filter.Eq(p => p.Title, title);
+            return await _collection.Find(filter).AnyAsync();
+        }
 
     public async Task SaveFileAsync(string filePath, string blobUrl, string category)
     {

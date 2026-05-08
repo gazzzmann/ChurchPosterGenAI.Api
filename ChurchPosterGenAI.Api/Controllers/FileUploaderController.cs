@@ -1,9 +1,12 @@
 using ChurchPosterGenAI.Api.Controllers;
 using ChurchPosterGenAI.Api.Helpers;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ChurchPosterGenAI.Api.Services;
 
-public class FileUploaderService
+[Route("api/[controller]")]
+[ApiController]
+public class FileUploaderController : ControllerBase
 {
     private readonly IConfiguration _config;
     private readonly MongoService _mongoService;
@@ -11,7 +14,7 @@ public class FileUploaderService
     private readonly IBlobStorageService _blobStorageService;
     private readonly string _directory;
 
-    public FileUploaderService(
+    public FileUploaderController(
         IConfiguration config,
         MongoService mongoService,
         PosterClassifierService classifierService,
@@ -25,7 +28,8 @@ public class FileUploaderService
     }
 
     // uploads all new files in the directory that haven't been processed yet
-    public async Task AutomaticFileUploaderAsync()
+    [HttpPost("/FileUploader")]
+    public async Task<IActionResult> AutomaticFileUploaderAsync()
     {
         var files = Directory.EnumerateFiles(_directory);
 
@@ -33,6 +37,7 @@ public class FileUploaderService
         {
             await ProcessFileAsync(filePath);
         }
+        return Ok("Task Completed");
     }
 
     // processes a single file — classify, upload to blob, save to mongo
@@ -50,22 +55,22 @@ public class FileUploaderService
     }
 
     // uploads a single file manually by path
-    public async Task UploadSingleFileAsync(string filePath)
+    private async Task UploadSingleFileAsync(string filePath)
     {
-        if (!File.Exists(filePath))
+        if (!System.IO.File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
 
         await ProcessFileAsync(filePath);
     }
 
     // returns all files in the directory
-    public IEnumerable<string> GetAllFiles()
+    private IEnumerable<string> GetAllFiles()
     {
         return Directory.EnumerateFiles(_directory);
     }
 
     // returns only files that haven't been uploaded yet
-    public async Task<IEnumerable<string>> GetPendingFilesAsync()
+    private async Task<IEnumerable<string>> GetPendingFilesAsync()
     {
         var pending = new List<string>();
 

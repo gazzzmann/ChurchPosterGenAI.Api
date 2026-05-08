@@ -18,10 +18,16 @@ public class GenerationController : ControllerBase
     /// <summary>
     /// Generate a new poster
     /// </summary>
-    [HttpPost]
+    [HttpPost("/GenerateImage")]
     public async Task<ActionResult<GeneratePosterResponseDto>> Generate(
         [FromBody] GeneratePosterRequestDto dto)
-    {
+    {   
+        if (string.IsNullOrWhiteSpace(dto.UserId))
+        {
+            Random rand = new Random();
+            int randomId = rand.Next();
+            dto.UserId = randomId.ToString();
+        }
         if (dto == null)
             return BadRequest("Request body is required");
 

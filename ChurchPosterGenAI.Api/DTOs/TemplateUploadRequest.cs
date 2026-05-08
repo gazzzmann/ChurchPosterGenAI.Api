@@ -5,8 +5,8 @@ namespace ChurchPosterGenAI.Api.DTOs
 {
     public class TemplateUploadRequest
     {
-        public string Title { get; set; }
+        public required string Title { get; set; }
         public PosterCategory Category { get; set; }
-        public IFormFile Image { get; set; }
+        public required IFormFile Image { get; set; }
     }
 }

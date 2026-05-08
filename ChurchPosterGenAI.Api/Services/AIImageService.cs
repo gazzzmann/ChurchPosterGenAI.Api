@@ -1,76 +1,75 @@
-﻿namespace ChurchPosterGenAI.Api.Services
+﻿using System.Text;
+using System.Text.Json;
+namespace ChurchPosterGenAI.Api.Services
 {
     public class AIImageService : IAIImageService
     {
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _config;
 
-        public AIImageService(
-            IHttpClientFactory factory)
+        public AIImageService(IHttpClientFactory httpClientFactory, IConfiguration config)
         {
-            _httpClient = factory.CreateClient("HuggingFace");
+            _httpClientFactory = httpClientFactory;
+            _config = config;
         }
+        // ...
 
-        public async Task<string> GenerateFromImageAsync(
-            string imageUrl,
-            string prompt)
+
+        public async Task<string> GenerateFromImageAsync(string imageUrl, string prompt)
         {
-            // STEP 1: Download reference image from Azure Blob URL
-            var imageBytes =
-                await _httpClient.GetByteArrayAsync(imageUrl);
+            // STEP 1: Get a detailed description of the uploaded image
+            var descriptionService = new ImageDescriptionService(_config);
+            var imageDescription = await descriptionService.DescribeImageAsync(imageUrl);
 
-            var base64Image =
-                Convert.ToBase64String(imageBytes);
+            // STEP 2: Build an enriched prompt that merges description + user instruction
+            var enrichedPrompt = BuildEnrichedPrompt(imageDescription, prompt);
 
-            // STEP 2: Build payload for Hugging Face
-            var payload = new
-            {
-                inputs = prompt,
-                parameters = new
-                {
-                    image = base64Image,
-                    strength = 0.55,
-                    guidance_scale = 8.5
-                }
-            };
+            // STEP 3: Send to FLUX as text-to-image
+            var payload = new { inputs = enrichedPrompt };
 
-            // STEP 3: Generate image
-            var response =
-                await _httpClient.PostAsJsonAsync(
-                    "stabilityai/stable-diffusion-xl-base-1.0",
-                    payload);
+            var json = JsonSerializer.Serialize(payload);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var hfClient = _httpClientFactory.CreateClient("HuggingFace");
+            const string modelId = "black-forest-labs/FLUX.1-schnell";
+            var endpoint = $"https://router.huggingface.co/hf-inference/models/{modelId}";
+
+            hfClient.DefaultRequestHeaders.Add("X-Wait-For-Model", "true");
+
+            var response = await hfClient.PostAsync(endpoint, content);
 
             if (!response.IsSuccessStatusCode)
             {
-                var error =
-                    await response.Content.ReadAsStringAsync();
-
-                throw new Exception(
-                    $"HuggingFace Error: {error}");
+                var error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"HuggingFace Error ({(int)response.StatusCode}): {error}");
             }
 
-            var generatedBytes =
-                await response.Content.ReadAsByteArrayAsync();
+            var generatedBytes = await response.Content.ReadAsByteArrayAsync();
 
-            // STEP 4: Save locally for testing
-            var folder = Path.Combine(
-                Directory.GetCurrentDirectory(),
-                "TempGenerated");
-
+            var folder = Path.Combine(Directory.GetCurrentDirectory(), "TempGenerated");
             Directory.CreateDirectory(folder);
 
-            var fileName =
-                $"{Guid.NewGuid():N}.png";
+            var fileName = $"{Guid.NewGuid():N}.png";
+            var fullPath = Path.Combine(folder, fileName);
 
-            var fullPath = Path.Combine(
-                folder,
-                fileName);
-
-            await File.WriteAllBytesAsync(
-                fullPath,
-                generatedBytes);
-
-            // STEP 5: Return local file path
+            await File.WriteAllBytesAsync(fullPath, generatedBytes);
             return fullPath;
         }
-    }
-}
+
+        private string BuildEnrichedPrompt(string imageDescription, string userInstruction)
+        {
+            return $"""
+                You must generate an image based on the following visual description, but apply the user's modification to it.
+
+                ORIGINAL IMAGE DESCRIPTION:
+                {imageDescription}
+
+                USER MODIFICATION REQUEST:
+                {userInstruction}
+
+                Apply the modification faithfully while keeping everything else in the original description exactly the same.
+                High quality, photorealistic, detailed.
+                """;
+        }
+            }
+        }
