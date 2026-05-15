@@ -3,141 +3,60 @@ using ChurchPosterGenAI.Api.DTOs;
 using ChurchPosterGenAI.Api.Enum;
 using Microsoft.EntityFrameworkCore;
 
-namespace ChurchPosterGenAI.Api.Services
+namespace ChurchPosterGenAI.Api.Services;
+
+public class GenerationService : IGenerationService
 {
-    public class GenerationService : IGenerationService
+    private readonly ChurchPosterDbContext _context;
+    private readonly IAIImageService _aiImageService;
+
+    public GenerationService(
+        ChurchPosterDbContext context,
+        IAIImageService aiImageService)
     {
-        private readonly ChurchPosterDbContext _context;
-        private readonly IAIImageService _aiService;
+        _context = context;
+        _aiImageService = aiImageService;
+    }
 
-        public GenerationService(
-            ChurchPosterDbContext context,
-            IAIImageService aiService)
+    public async Task<GeneratePosterResponseDto> GenerateAsync(
+        GeneratePosterRequestDto dto)
+    {
+        // Generate a UserId if one was not provided
+        dto.UserId ??= Guid.NewGuid().ToString("N");
+
+        // Determine which template image to use:
+        // - If ImageUrl is provided directly, use it.
+        // - Otherwise, load the template from SQL Server using PosterTemplateId.
+        var templateImageUrl = await ResolveTemplateImageUrlAsync(dto);
+
+        // Save the generation request
+        var request = new GenerationRequest
         {
-            _context = context;
-            _aiService = aiService;
-        }
+            UserId = dto.UserId,
+            PosterTemplateId = dto.PosterTemplateId ?? 1,
+            Prompt = dto.Prompt,
+            Status = GenerationStatus.Processing,
+            CreatedAt = DateTime.UtcNow
+        };
 
-        public async Task<GeneratePosterResponseDto> GenerateAsync(
-            GeneratePosterRequestDto dto)
+        _context.Requests.Add(request);
+        await _context.SaveChangesAsync();
+
+        try
         {
-            var template = await GetPosterTemplateAsync(dto.PosterTemplateId);
+            // Core AI workflow:
+            // 1. Describe the template image.
+            // 2. Combine description with the user's prompt.
+            // 3. Generate a new poster.
+            var generatedImageUrl = await _aiImageService.GenerateFromImageAsync(
+                templateImageUrl,
+                dto.Prompt);
 
-            var structuredPrompt = BuildStructuredPrompt(template, dto.Prompt);
-
-            var request = await CreateGenerationRequestAsync(dto, structuredPrompt);
-
-            try
-            {
-                var imageUrl = await _aiService.GenerateFromImageAsync(
-                    template.ImageUrl,
-                    structuredPrompt);
-
-                await SaveGeneratedPosterAsync(request, imageUrl);
-
-                return new GeneratePosterResponseDto
-                {
-                    RequestId = request.Id,
-                    Status = request.Status.ToString(),
-                    ImageUrl = imageUrl
-                };
-            }
-            catch
-            {
-                request.Status = GenerationStatus.Failed;
-                await _context.SaveChangesAsync();
-                throw;
-            }
-        }
-
-        public async Task<GenerationResultDto?> GetResultAsync(int requestId)
-        {
-            var request = await _context.Requests
-                .Include(x => x.Results)
-                .FirstOrDefaultAsync(x => x.Id == requestId);
-
-            if (request == null)
-                return null;
-
-            return new GenerationResultDto
-            {
-                RequestId = request.Id,
-                Status = request.Status.ToString(),
-                Results = request.Results
-                    .Select(result => new GeneratedPosterResultDto
-                    {
-                        Id = result.Id,
-                        ImageUrl = result.ImageUrl,
-                        CreatedAt = result.CreatedAt
-                    })
-                    .ToList()
-            };
-        }
-
-        private async Task<PosterTemplate> GetPosterTemplateAsync(int templateId)
-        {
-            var template = await _context.Set<PosterTemplate>()
-                .FirstOrDefaultAsync(t => t.Id == templateId);
-
-            if (template != null)
-                return template;
-
-            return new PosterTemplate
-            {
-                Id = templateId,
-                Title = "Sunday Service",
-                Category = PosterCategory.Conference,
-                ImageUrl = "https://example.com/default-church-template.jpg"
-            };
-        }
-
-        private string BuildStructuredPrompt(
-            PosterTemplate template,
-            string userPrompt)
-        {
-            return $@"
-            Modify this church flyer template:
-            
-            Title: {template.Title}
-            Category: {template.Category}
-            
-            User Input:
-            {userPrompt}
-            
-            Enhance with:
-            - modern typography
-            - vibrant colors
-            - spiritual atmosphere
-            - clean layout";
-        }
-
-        private async Task<GenerationRequest> CreateGenerationRequestAsync(
-            GeneratePosterRequestDto dto,
-            string structuredPrompt)
-        {
-            var request = new GenerationRequest
-            {
-                UserId = dto.UserId,
-                PosterTemplateId = dto.PosterTemplateId,
-                Prompt = structuredPrompt,
-                Status = GenerationStatus.Processing,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Requests.Add(request);
-            await _context.SaveChangesAsync();
-
-            return request;
-        }
-
-        private async Task SaveGeneratedPosterAsync(
-            GenerationRequest request,
-            string imageUrl)
-        {
+            // Save generated poster record
             var generatedPoster = new GeneratedPoster
             {
                 GenerationRequestId = request.Id,
-                ImageUrl = imageUrl,
+                ImageUrl = generatedImageUrl,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -146,6 +65,64 @@ namespace ChurchPosterGenAI.Api.Services
             request.Status = GenerationStatus.Completed;
 
             await _context.SaveChangesAsync();
+
+            return new GeneratePosterResponseDto
+            {
+                RequestId = request.Id,
+                Status = request.Status.ToString(),
+                ImageUrl = generatedImageUrl
+            };
         }
+        catch
+        {
+            request.Status = GenerationStatus.Failed;
+            await _context.SaveChangesAsync();
+            throw;
+        }
+    }
+
+    public async Task<GenerationResultDto?> GetResultAsync(int requestId)
+    {
+        var request = await _context.Requests
+            .Include(r => r.Results)
+            .FirstOrDefaultAsync(r => r.Id == requestId);
+
+        if (request == null)
+            return null;
+
+        return new GenerationResultDto
+        {
+            RequestId = request.Id,
+            Status = request.Status.ToString(),
+            Results = request.Results
+                .Select(result => new GeneratedPosterResultDto
+                {
+                    Id = result.Id,
+                    ImageUrl = result.ImageUrl,
+                    CreatedAt = result.CreatedAt
+                })
+                .ToList()
+        };
+    }
+
+    private async Task<string> ResolveTemplateImageUrlAsync(
+        GeneratePosterRequestDto dto)
+    {
+        // If a direct image URL is provided, use it
+        if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
+            return dto.ImageUrl;
+
+        // Otherwise, a template ID must be supplied
+        if (!dto.PosterTemplateId.HasValue)
+            throw new ArgumentException(
+                "Either PosterTemplateId or ImageUrl must be provided.");
+
+        var template = await _context.Templates
+            .FirstOrDefaultAsync(t => t.Id == dto.PosterTemplateId.Value);
+
+        if (template == null)
+            throw new KeyNotFoundException("Template not found.");
+
+        return template.ImageUrl;
     }
 }

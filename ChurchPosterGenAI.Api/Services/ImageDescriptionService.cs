@@ -14,7 +14,6 @@ namespace ChurchPosterGenAI.Api.Services
 
         public async Task<string> DescribeImageAsync(string imageUrl)
         {
-            DotNetEnv.Env.Load();
             string apiKey = _config["OpenRouter:ApiKey"] ?? throw new Exception("OpenRouter API key not found");
 
             // Download image and convert to base64
@@ -22,20 +21,54 @@ namespace ChurchPosterGenAI.Api.Services
             var imageBytes = await downloadClient.GetByteArrayAsync(imageUrl);
             var base64Image = Convert.ToBase64String(imageBytes);
 
-            string prompt = @"You are an expert image analyst assisting an AI image generation pipeline.
-            Describe the image in exhaustive visual detail so that an AI model (like FLUX.1) can recreate it accurately from text alone.
-            Ignore all text, words, logos, and typography in the image — do not describe or reference them in any way.
+            string prompt = @"You are an expert image analyst assisting a two-stage AI image generation pipeline.
+            Your output will be fed directly into a text-to-image diffusion model (FLUX.1) as its sole prompt.
+            Describe every single visual and textual element in the image with exhaustive precision so the diffusion model can recreate it pixel-accurately.
 
-            Your description must cover:
-            - Overall composition and layout (e.g. centered subject, split layout, full bleed background)
-            - Color palette: dominant colors, gradients, overlays, and contrast levels
-            - Background: solid color, texture, pattern, photo, bokeh, gradient — be specific
-            - Foreground elements: people, objects, icons, illustrations — describe appearance, clothing, pose, expression
-            - Decorative elements: borders, shapes, lines, glows, shadows, sparkles, overlays
-            - Lighting and mood: bright, dark, warm, dramatic, soft, cinematic
-            - Style: photorealistic, illustrated, flat design, 3D render, painterly, minimalist
+            STRUCTURE YOUR DESCRIPTION AS FLOWING PROSE covering these aspects in order:
 
-            Return only the description. No commentary, no labels, no markdown — plain flowing prose only. Be extremely specific about every single visual detail.";
+            1. OVERALL LAYOUT & COMPOSITION
+            - Aspect ratio, orientation (portrait/landscape/square)
+            - How the space is divided (top/middle/bottom zones, left/right split, layering order)
+            - Visual hierarchy: what dominates, what is secondary
+
+            2. BACKGROUND
+            - Base color(s), gradients, textures, patterns
+            - Any photographic background elements, their position, blur level
+            - Vignettes, overlays, color washes
+
+            3. PHOTOGRAPHIC / ILLUSTRATED ELEMENTS
+            - Every object, person, or illustration: exact position (top-center, lower-left, etc.)
+            - Physical description: shape, material, color, finish (matte/glossy/metallic)
+            - Lighting on each object: direction, intensity, shadows, reflections, glow
+            - Overlapping relationships between elements
+
+            4. DECORATIVE & GRAPHIC ELEMENTS
+            - Shapes, lines, borders, ribbons, fabric, smoke, particles, sparkles
+            - Their color, opacity, position, size relative to canvas
+            - Any 3D vs flat appearance
+
+            5. ALL TEXT CONTENT — EXACT AND COMPLETE
+            - Every single word and phrase, reproduced exactly as written
+            - For each text block: exact wording, position on canvas (e.g. top-center, bottom-left strip),
+                font style (serif/sans-serif/display/script), weight (thin/regular/bold/black),
+                approximate size relative to canvas (massive/large/medium/small/tiny),
+                color, any outline/shadow/gradient/texture applied to the letters,
+                letter spacing (tight/normal/wide/extremely wide), capitalization style
+
+            6. COLOR PALETTE
+            - List the 4–6 dominant hex-approximate colors and where each appears
+
+            7. LIGHTING & MOOD
+            - Overall lighting style: dramatic, soft, cinematic, flat, etc.
+            - Light source direction and color temperature
+            - Mood and atmosphere conveyed
+
+            8. STYLE CLASSIFICATION
+            - Photorealistic, 3D render, illustrated, flat design, mixed-media, etc.
+            - Any specific design era or aesthetic (modern, vintage, luxury, etc.)
+
+            Return only the description as plain flowing prose. No bullet points, no headers, no markdown, no commentary — just one continuous richly detailed paragraph or series of paragraphs that reads like a complete visual brief.";
 
             var requestBody = new
             {

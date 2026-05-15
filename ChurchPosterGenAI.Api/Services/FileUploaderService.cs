@@ -5,26 +5,30 @@ namespace ChurchPosterGenAI.Api.Services;
 
 public class FileUploaderService
 {
-    private readonly IConfiguration _config;
     private readonly MongoService _mongoService;
     private readonly PosterClassifierService _classifierService;
     private readonly IBlobStorageService _blobStorageService;
     private readonly string _directory;
 
     public FileUploaderService(
-        IConfiguration config,
+        IConfiguration configuration,
         MongoService mongoService,
         PosterClassifierService classifierService,
         IBlobStorageService blobStorageService)
     {
-        _config = config;
         _mongoService = mongoService;
         _classifierService = classifierService;
         _blobStorageService = blobStorageService;
-        _directory = config["Folder:Directory"] ?? throw new Exception("Directory not found");
+
+        _directory = configuration["Folder:Directory"]
+            ?? throw new InvalidOperationException(
+                "Folder:Directory is not configured.");
     }
 
-    // uploads all new files in the directory that haven't been processed yet
+    /// <summary>
+    /// Scans the configured folder and uploads every file
+    /// that has not already been imported.
+    /// </summary>
     public async Task AutomaticFileUploaderAsync()
     {
         var files = Directory.EnumerateFiles(_directory);
@@ -35,46 +39,31 @@ public class FileUploaderService
         }
     }
 
-    // processes a single file — classify, upload to blob, save to mongo
+    /// <summary>
+    /// Processes a single file:
+    /// 1. Checks if it already exists in MongoDB.
+    /// 2. Classifies the poster category using AI.
+    /// 3. Uploads the image to Azure Blob Storage.
+    /// 4. Saves template metadata to MongoDB.
+    /// </summary>
     private async Task ProcessFileAsync(string filePath)
     {
-        bool alreadyExists = await _mongoService.CheckFiles(filePath);
-        if (alreadyExists) return;
+        var alreadyExists = await _mongoService.CheckFiles(filePath);
 
-        string category = await _classifierService.PosterClassifier(filePath);
+        if (alreadyExists)
+            return;
+
+        var category = await _classifierService.PosterClassifier(filePath);
 
         using var formFile = new PhysicalFormFile(filePath);
-        string blobUrl = await _blobStorageService.UploadImageAsync(formFile, category);
 
-        await _mongoService.SaveFileAsync(filePath, blobUrl, category);
-    }
+        var blobUrl = await _blobStorageService.UploadImageAsync(
+            formFile,
+            category);
 
-    // uploads a single file manually by path
-    public async Task UploadSingleFileAsync(string filePath)
-    {
-        if (!File.Exists(filePath))
-            throw new FileNotFoundException($"File not found: {filePath}");
-
-        await ProcessFileAsync(filePath);
-    }
-
-    // returns all files in the directory
-    public IEnumerable<string> GetAllFiles()
-    {
-        return Directory.EnumerateFiles(_directory);
-    }
-
-    // returns only files that haven't been uploaded yet
-    public async Task<IEnumerable<string>> GetPendingFilesAsync()
-    {
-        var pending = new List<string>();
-
-        foreach (var filePath in Directory.EnumerateFiles(_directory))
-        {
-            bool exists = await _mongoService.CheckFiles(filePath);
-            if (!exists) pending.Add(filePath);
-        }
-
-        return pending;
+        await _mongoService.SaveFileAsync(
+            filePath,
+            blobUrl,
+            category);
     }
 }

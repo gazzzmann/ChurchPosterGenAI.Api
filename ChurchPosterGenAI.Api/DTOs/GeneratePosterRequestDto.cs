@@ -1,17 +1,15 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ChurchPosterGenAI.Api.DTOs
+namespace ChurchPosterGenAI.Api.DTOs;
+
+public class GeneratePosterRequestDto
 {
-    public class GeneratePosterRequestDto
-    {
-        [Required]
-        public string UserId { get; set; } = string.Empty;
+    public string? UserId { get; set; }
 
-        [Range(1, int.MaxValue)]
-        public int PosterTemplateId { get; set; }
+    public int? PosterTemplateId { get; set; }
 
-        [Required]
-        public string Prompt { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
 
-    }
+    [Required]
+    public string Prompt { get; set; } = string.Empty;
 }

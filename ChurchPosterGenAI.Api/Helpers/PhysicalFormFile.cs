@@ -1,8 +1,6 @@
-using Microsoft.AspNetCore.Http;
-
 namespace ChurchPosterGenAI.Api.Helpers;
 
-public class PhysicalFormFile : IFormFile,IDisposable
+public class PhysicalFormFile : IFormFile, IDisposable
 {
     private readonly FileInfo _fileInfo;
     private readonly Stream _stream;
@@ -37,11 +35,11 @@ public class PhysicalFormFile : IFormFile,IDisposable
     private static string ResolveContentType(string extension) => extension.ToLower() switch
     {
         ".jpg" or ".jpeg" => "image/jpeg",
-        ".png"            => "image/png",
-        ".gif"            => "image/gif",
-        ".webp"           => "image/webp",
-        ".pdf"            => "application/pdf",
-        _                 => "application/octet-stream"
+        ".png" => "image/png",
+        ".gif" => "image/gif",
+        ".webp" => "image/webp",
+        ".pdf" => "application/pdf",
+        _ => "application/octet-stream"
     };
     public void Dispose()
     {
